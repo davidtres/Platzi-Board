@@ -1,29 +1,40 @@
 import { fromEvent } from "rxjs";
-import { map } from "rxjs/operators";
-
+import { map, mergeAll } from "rxjs/operators";
+// import * as distincfr from "./distinct";
+// import * as merge from "./merge";
+import * as takeUntil from "./takeUntil";
 const canvas = document.getElementById("reactive-canvas");
 let cursorPosition = { x: 0, y: 0 };
-const onMouseDown$ = fromEvent(canvas, "mousedown").pipe(
-  map((event) => {
-    cursorPosition = {
-      x: event.clientX - canvas.offsetLeft,
-      y: event.clientY - canvas.offsetTop,
-    };
-    console.log(cursorPosition);
-    // console.log({ x: event.clientX, y: event.clientY });
-    // console.log({ x: canvas.offsetLeft, y: canvas.offsetTop });
-  })
-);
+
+const updateCursorPosition = (event) => {
+  cursorPosition = {
+    x: event.clientX - canvas.offsetLeft,
+    y: event.clientY - canvas.offsetTop,
+  };
+};
+
+const onMouseDown$ = fromEvent(canvas, "mousedown");
 const onMouseMove$ = fromEvent(canvas, "mousemove");
 const onMouseUp$ = fromEvent(canvas, "mousup");
 
-onMouseDown$.subscribe();
+onMouseDown$.subscribe(updateCursorPosition);
 
 const canvasContext = canvas.getContext("2d");
-canvasContext.lineWidth = 8;
+canvasContext.lineWidth = 1;
 canvasContext.strokeStyle = "white";
-canvasContext.beginPath();
-canvasContext.moveTo(0, 0);
-canvasContext.lineTo(100, 100);
-canvasContext.stroke();
-canvasContext.closePath();
+
+const paintStroke = (event) => {
+  canvasContext.beginPath();
+  canvasContext.moveTo(cursorPosition.x, cursorPosition.y);
+  updateCursorPosition(event);
+  canvasContext.lineTo(cursorPosition.x, cursorPosition.y);
+  canvasContext.stroke();
+  canvasContext.closePath();
+};
+
+const startPaint$ = onMouseDown$.pipe(
+  map(() => onMouseMove$),
+  mergeAll()
+);
+
+startPaint$.subscribe(paintStroke);
